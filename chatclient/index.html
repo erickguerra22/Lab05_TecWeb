@@ -1,0 +1,191 @@
+<html>
+
+<head>
+</head>
+
+<body>
+  <script type="application/javascript">
+    const today = new Date()
+    const myUser = 'stiv_guerra'
+    document.body.style.margin = 0
+    document.body.style.fontFamily = 'Monospace'
+    document.body.style.fontSize = '18px'
+    // HEAD
+    const title = document.createElement('title')
+    const favicon = document.createElement('link')
+    title.append('Horizon')
+    favicon.rel = 'icon'
+    favicon.href = './favicon.png'
+    favicon.type = 'image/png'
+
+    document.head.append(title)
+    document.head.append(favicon)
+
+    // BODY
+
+    // Contenedor de mensajes
+    const container = document.createElement('ul')
+    container.storage = 0
+    container.style.padding = '5 4% 5 4%'
+    container.style.boxSizing = 'border-box'
+    container.style.backgroundColor = 'gray'
+    container.style.margin = 0
+    container.style.height = '80%'
+    container.style.overflow = 'auto'
+    container.style.display = 'flex'
+    container.style.flexDirection = 'column-reverse'
+
+    const Message = (text, user, created_on) => {
+      const li = document.createElement('li')
+      const content = document.createElement('div')
+      const autor = document.createElement('span')
+      const message = document.createElement('p')
+      const dateTime = document.createElement('span')
+
+      if (today >= new Date(created_on))
+        dateTime.append(created_on)
+      else
+        dateTime.append(created_on.slice(11, 16))
+      dateTime.style.display = 'flex'
+      dateTime.style.flexDirection = 'row-reverse'
+      dateTime.style.fontSize = '15px'
+
+      autor.style.fontStyle = 'italic'
+      autor.style.color = 'aqua'
+      autor.append(user)
+      message.append(text)
+      content.append(autor)
+      content.append(message)
+
+      const imgRegex = new RegExp("(https?:\\/\\/.*\\.*(?:jpg|jpeg|png|webp|avif|gif|svg|com\\/images.*|))")
+      if(imgRegex.test(text)){
+        const link = imgRegex.exec(text)[0]
+        const img = document.createElement('img')
+        img.src = link
+        img.style.maxWidth = "100%"
+        content.append(img)
+      }
+
+      content.append(dateTime)
+      content.style.minWidth = '300px'
+      content.style.maxWidth = '70%'
+      content.style.backgroundColor = 'black'
+      content.style.color = 'white'
+      content.style.borderRadius = '20px'
+      content.style.wordBreak = 'break-word'
+      content.style.padding = '10 20 10 20'
+
+      li.style.display = 'flex'
+      li.style.padding = '5 0 5 0'
+      if (user === myUser) {
+        autor.style.display = 'none'
+        content.style.backgroundColor = 'white'
+        content.style.color = 'black'
+        li.style.flexDirection = 'row-reverse'
+      }
+
+      li.append(content)
+      return li
+    }
+
+    const getMessages = async () => {
+      const response = await fetch('http://uvgenios.online/api/messages')
+      const messages = await response.json()
+      return messages
+    }
+
+    setInterval(async () => {
+      const messages = await getMessages()
+      if (messages.length > container.storage){
+        const messageList = messages.map(({ text, user, created_on }) => Message(text, user, created_on))
+        container.prepend(messageList.slice().reverse()[0])
+        container.storage += 1
+      }
+    }, 500)
+
+    const loadMessages = async () => {
+      const messages = await getMessages()
+      const messageList = messages.map(({ text, user, created_on }) => Message(text, user, created_on))
+      messageList.forEach((m) => {
+        container.prepend(m)
+        container.storage += 1
+      })
+    }
+
+    // Espacio para nuevo mensaje
+    const newMessage = document.createElement('form')
+    const inputM = document.createElement('textArea')
+    const send = document.createElement('button')
+    send.append('ENVIAR')
+    send.style.fontFamily = 'unset'
+    send.style.fontStyle = 'oblique'
+    send.style.fontSize = 35
+    send.style.height = '55%'
+    send.style.fontWeight = 'bold'
+    send.style.width = '19%'
+    send.style.marginLeft = '2%'
+    send.style.borderRadius = '200'
+    inputM.style.resize = 'none'
+    inputM.style.width = '100%'
+    inputM.style.marginLeft = 'auto'
+    inputM.style.height = '60%'
+    inputM.style.verticalAlign = 'center'
+    inputM.style.padding = '2% 15 2% 15'
+    inputM.placeholder = `Enviar como: ${myUser}`
+    inputM.style.fontSize = '20px'
+    newMessage.style.marginBottom = 0
+    newMessage.style.height = '20%'
+    newMessage.style.backgroundColor = 'black'
+    newMessage.style.paddingLeft = '35'
+    newMessage.style.paddingRight = '35'
+    newMessage.style.boxSizing = 'border-box'
+    newMessage.style.display = 'inline-flex'
+    newMessage.style.width = '100vw'
+    newMessage.style.alignItems = 'center'
+    newMessage.append(inputM)
+    newMessage.append(send)
+
+    const sendMessage = async (text) => {
+      const body = {
+        text,
+        user: myUser
+      }
+      const response = await fetch('http://uvgenios.online/api/messages', {
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      return response
+    }
+
+    const sendEv = async (event) => {
+      const regex = new RegExp('^\\s*$')
+      const message = inputM.value
+      if (!regex.test(message)) {
+        await sendMessage(message)
+        inputM.value = ""
+      }
+    }
+
+    inputM.addEventListener('keypress', async (event) => {
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault()
+        sendEv()
+      }
+    })
+
+    send.addEventListener('click', async (event) => {
+      event.preventDefault()
+      sendEv()
+    })
+
+
+    loadMessages()
+    document.body.append(container)
+    document.body.append(newMessage)
+  </script>
+</body>
+
+</html>
